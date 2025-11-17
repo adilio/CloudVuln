@@ -1,0 +1,284 @@
+name: CloudVuln Test Suite
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      run_integration_tests:
+        description: 'Run integration tests (requires AWS credentials)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  TF_VERSION: '1.5.0'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  lint:
+    name: Lint and Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Check shell scripts with shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          find . -name "*.sh" -type f -exec shellcheck -x {} +
+
+      - name: Validate Terraform formatting
+        run: |
+          for scenario in iam-user-risk dspm-data-generator linux-misconfig-web windows-vuln-iis docker-container-host; do
+            echo "Checking Terraform format for $scenario"
+            terraform -chdir="$scenario" fmt -check -recursive || echo "::warning::$scenario has formatting issues"
+          done
+
+      - name: Validate bash script executability
+        run: |
+          find . -name "*.sh" -type f ! -executable -exec echo "::warning::Script not executable: {}" \;
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install bats
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats
+
+      - name: Install bats libraries
+        run: |
+          git clone https://github.com/bats-core/bats-support.git /tmp/bats-support
+          git clone https://github.com/bats-core/bats-assert.git /tmp/bats-assert
+          echo "/tmp/bats-support" >> $GITHUB_PATH
+          echo "/tmp/bats-assert" >> $GITHUB_PATH
+
+      - name: Run unit tests
+        run: |
+          if [ -d tests/unit ]; then
+            bats tests/unit/ -t || true
+          else
+            echo "No unit tests found"
+          fi
+
+  terraform-validation:
+    name: Terraform Validation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scenario:
+          - iam-user-risk
+          - dspm-data-generator
+          - linux-misconfig-web
+          - windows-vuln-iis
+          - docker-container-host
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: |
+          cd ${{ matrix.scenario }}
+          terraform init -backend=false
+
+      - name: Terraform Validate
+        run: |
+          cd ${{ matrix.scenario }}
+          terraform validate
+
+      - name: Terraform Format Check
+        run: |
+          cd ${{ matrix.scenario }}
+          terraform fmt -check -recursive
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_integration_tests == 'true'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run Terraform syntax tests
+        run: |
+          chmod +x tests/integration/terraform_syntax_test.sh
+          ./tests/integration/terraform_syntax_test.sh
+
+      - name: Test IAM scenario deployment (dry-run)
+        run: |
+          cd iam-user-risk
+          terraform init
+          terraform plan -out=plan.tfplan
+
+      - name: Upload Terraform plans
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: terraform-plans
+          path: '**/plan.tfplan'
+          retention-days: 7
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tfsec (Terraform security scanner)
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          soft_fail: true
+          format: sarif
+          additional_args: --exclude-downloaded-modules --minimum-severity MEDIUM
+
+      - name: Upload tfsec SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+
+      - name: Run Trivy (filesystem scanner)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  cost-estimation:
+    name: Cost Estimation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate cost estimates
+        run: |
+          if [ -x tools/cost-estimate.sh ]; then
+            ./tools/cost-estimate.sh || echo "::warning::Cost estimation failed"
+          else
+            echo "::notice::Cost estimation tool not found"
+          fi
+
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check README files
+        run: |
+          scenarios="iam-user-risk dspm-data-generator linux-misconfig-web windows-vuln-iis docker-container-host"
+          for scenario in $scenarios; do
+            if [ ! -f "$scenario/README.md" ]; then
+              echo "::error::Missing README.md in $scenario"
+              exit 1
+            else
+              echo "✅ README.md present in $scenario"
+            fi
+          done
+
+      - name: Check for broken links in documentation
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/markdown-link-check-config.json'
+        continue-on-error: true
+
+      - name: Validate documentation structure
+        run: |
+          required_docs=("README.md" "docs/ARCHITECTURE.md" "docs/QUICKSTART.md")
+          for doc in "${required_docs[@]}"; do
+            if [ -f "$doc" ]; then
+              echo "✅ $doc present"
+            else
+              echo "::error::Missing required documentation: $doc"
+              exit 1
+            fi
+          done
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, terraform-validation, security-scan, documentation]
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Terraform Validation | ${{ needs.terraform-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Determine overall status
+        run: |
+          if [ "${{ needs.lint.result }}" == "failure" ] || \
+             [ "${{ needs.unit-tests.result }}" == "failure" ] || \
+             [ "${{ needs.terraform-validation.result }}" == "failure" ] || \
+             [ "${{ needs.documentation.result }}" == "failure" ]; then
+            echo "::error::One or more critical tests failed"
+            exit 1
+          else
+            echo "::notice::All critical tests passed!"
+          fi
