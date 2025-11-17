@@ -31,14 +31,14 @@ output "security_group_id" {
 output "summary" {
   description = "Summary of Docker host misconfigurations for CWPP/CSPM validation"
   value = {
-    instance_id              = aws_instance.docker_host.id
-    public_ip                = aws_instance.docker_host.public_ip
-    app_url                  = "http://${aws_instance.docker_host.public_ip}:8080"
-    container_runs_as_root   = true
-    host_networking_mode     = true
-    host_volume_mounted      = true
-    imdsv1_enabled           = true
-    ebs_encryption           = false
-    public_port_exposed      = true
+    instance_id            = aws_instance.docker_host.id
+    public_ip              = aws_instance.docker_host.public_ip
+    app_url                = "http://${aws_instance.docker_host.public_ip}:8080"
+    container_runs_as_root = true
+    host_networking_mode   = true
+    host_volume_mounted    = true
+    imdsv1_enabled         = true
+    ebs_encryption         = false
+    public_port_exposed    = true
   }
 }

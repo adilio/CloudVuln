@@ -25,7 +25,7 @@ data "aws_ami" "oldest" {
   owners      = ["099720109477"]
   filter {
     name   = "image-id"
-    values = [sort(data.aws_ami_ids.ubuntu.ids)[length(data.aws_ami_ids.ubuntu.ids)-1]]
+    values = [sort(data.aws_ami_ids.ubuntu.ids)[length(data.aws_ami_ids.ubuntu.ids) - 1]]
   }
 }
 
@@ -35,10 +35,10 @@ resource "aws_security_group" "web_sg" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description = "Allow SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
+    description      = "Allow SSH"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
     cidr_blocks      = [var.allow_ssh_cidr]
     ipv6_cidr_blocks = [var.allow_ssh_cidr_ipv6]
   }
@@ -58,8 +58,8 @@ resource "aws_security_group" "web_sg" {
     protocol    = "tcp"
     cidr_blocks = [var.allow_http_cidr]
   }
-  
-  
+
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -128,8 +128,8 @@ resource "aws_instance" "linux_web" {
   associate_public_ip_address = true
   vpc_security_group_ids      = [aws_security_group.web_sg.id]
 
-  key_name                    = var.key_name
-  subnet_id                   = aws_subnet.scenario_subnet.id
+  key_name  = var.key_name
+  subnet_id = aws_subnet.scenario_subnet.id
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "optional" # Enables IMDSv1

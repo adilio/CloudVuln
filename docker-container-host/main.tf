@@ -28,10 +28,10 @@ resource "aws_security_group" "docker_sg" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
+    description      = "SSH"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
     cidr_blocks      = [var.allow_ssh_cidr]
     ipv6_cidr_blocks = ["::/0"]
   }
@@ -106,12 +106,4 @@ resource "aws_instance" "docker_host" {
     Owner    = var.owner
     Scenario = var.lab_scenario
   }
-}
-
-output "public_ip" {
-  value = aws_instance.docker_host.public_ip
-}
-
-output "app_url" {
-  value = "http://${aws_instance.docker_host.public_ip}:8080"
 }

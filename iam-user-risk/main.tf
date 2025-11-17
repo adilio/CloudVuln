@@ -46,27 +46,3 @@ resource "aws_iam_account_password_policy" "weak_policy" {
   require_symbols                = false
   allow_users_to_change_password = true
 }
-
-output "iam_user_name" {
-  value = aws_iam_user.this.name
-}
-
-output "access_key_1" {
-  value     = aws_iam_access_key.key1.id
-  sensitive = true
-}
-
-output "secret_key_1" {
-  value     = aws_iam_access_key.key1.secret
-  sensitive = true
-}
-
-output "access_key_2" {
-  value     = aws_iam_access_key.key2.id
-  sensitive = true
-}
-
-output "secret_key_2" {
-  value     = aws_iam_access_key.key2.secret
-  sensitive = true
-}
