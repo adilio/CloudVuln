@@ -11,12 +11,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-variable "ssh_public_key_path" {
-  description = "Path to SSH public key for EC2 access"
-  type        = string
-  default     = "~/.ssh/id_rsa.pub"
-}
-
 resource "aws_key_pair" "docker_key" {
   key_name   = "${var.lab_scenario}-key"
   public_key = file(var.ssh_public_key_path)
