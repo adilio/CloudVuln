@@ -31,12 +31,12 @@ output "security_group_id" {
 output "summary" {
   description = "Summary of Windows IIS misconfigurations for CSPM/CDR validation"
   value = {
-    instance_id           = aws_instance.this.id
-    public_ip             = aws_instance.this.public_ip
-    rdp_public_access     = true
-    imdsv1_enabled        = true
-    ebs_encryption        = false
-    os_outdated           = true
-    iis_directory_browse  = true
-   }
+    instance_id          = aws_instance.this.id
+    public_ip            = aws_instance.this.public_ip
+    rdp_public_access    = true
+    imdsv1_enabled       = true
+    ebs_encryption       = false
+    os_outdated          = true
+    iis_directory_browse = true
+  }
 }

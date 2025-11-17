@@ -24,10 +24,10 @@ resource "aws_security_group" "sg" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description = "Allow RDP"
-    from_port   = 3389
-    to_port     = 3389
-    protocol    = "tcp"
+    description      = "Allow RDP"
+    from_port        = 3389
+    to_port          = 3389
+    protocol         = "tcp"
     cidr_blocks      = [var.allow_rdp_cidr]
     ipv6_cidr_blocks = ["::/0"]
   }
@@ -92,13 +92,6 @@ resource "aws_instance" "this" {
   }
 }
 
-output "public_ip" {
-  value = aws_instance.this.public_ip
-}
-
-output "public_dns" {
-  value = aws_instance.this.public_dns
-}
 # Add Internet Gateway and public route for RDP access
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.scenario_vpc.id

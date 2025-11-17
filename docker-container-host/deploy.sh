@@ -5,12 +5,14 @@ set -e
 
 SCENARIO_NAME="docker-container-host"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OWNER="${TF_VAR_owner:-${USER:-aleghari}}"
 
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/../lib/checks.sh"
 
 echo -e "🚀  Deploying scenario: $SCENARIO_NAME"
 echo -e "🔍  Running pre-flight checks..."
-run_all_checks
+run_checks
 
 cd "$SCRIPT_DIR"
 

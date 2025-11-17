@@ -35,10 +35,10 @@ output "access_key_2_secret" {
 output "summary" {
   description = "Summary of IAM misconfigurations for CIEM validation"
   value = {
-    user_name         = aws_iam_user.this.name
-    user_arn          = aws_iam_user.this.arn
-    access_keys_count = 2
-    mfa_enabled       = false
+    user_name                = aws_iam_user.this.name
+    user_arn                 = aws_iam_user.this.arn
+    access_keys_count        = 2
+    mfa_enabled              = false
     policy_overly_permissive = true
     password_policy_weak     = true
   }

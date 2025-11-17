@@ -11,12 +11,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-variable "ssh_public_key_path" {
-  description = "Path to SSH public key for EC2 access"
-  type        = string
-  default     = "~/.ssh/id_rsa.pub"
-}
-
 resource "aws_key_pair" "docker_key" {
   key_name   = "${var.lab_scenario}-key"
   public_key = file(var.ssh_public_key_path)
@@ -28,10 +22,10 @@ resource "aws_security_group" "docker_sg" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
+    description      = "SSH"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
     cidr_blocks      = [var.allow_ssh_cidr]
     ipv6_cidr_blocks = ["::/0"]
   }
@@ -106,12 +100,4 @@ resource "aws_instance" "docker_host" {
     Owner    = var.owner
     Scenario = var.lab_scenario
   }
-}
-
-output "public_ip" {
-  value = aws_instance.docker_host.public_ip
-}
-
-output "app_url" {
-  value = "http://${aws_instance.docker_host.public_ip}:8080"
 }
