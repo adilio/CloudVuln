@@ -157,9 +157,127 @@ cd <scenario>
 
 ---
 
+## 🧪 Testing & Development
+
+CloudVuln includes a comprehensive test suite to ensure reliability and quality.
+
+### Quick Testing
+
+```bash
+# Run all tests
+make test
+
+# Run specific test suites
+make test-unit              # Unit tests (bats)
+make test-integration       # Integration tests (Terraform validation)
+make test-validation        # Validation tests (requires deployed infrastructure)
+
+# Run health check
+./tools/health-check.sh
+
+# Estimate costs
+./tools/cost-estimate.sh
+```
+
+### Test Coverage
+
+- **Unit Tests**: Bash function testing with bats
+- **Integration Tests**: Terraform syntax and configuration validation
+- **Validation Tests**: Verify deployed infrastructure has expected misconfigurations
+- **CI/CD**: Automated testing via GitHub Actions
+
+See [tests/README.md](tests/README.md) for detailed testing documentation.
+
+### Makefile Commands
+
+Common operations available via `make`:
+
+```bash
+make help                   # Show all available commands
+make check-deps             # Check if dependencies are installed
+make setup                  # Setup environment and make scripts executable
+make validate-all           # Validate all Terraform configurations
+make lint                   # Lint bash scripts with shellcheck
+make format                 # Format Terraform files
+make cost-estimate          # Estimate infrastructure costs
+make status                 # Show deployment status for all scenarios
+make clean                  # Clean up temporary files
+```
+
+### Development Tools
+
+Located in `tools/`:
+
+- **cost-estimate.sh**: Calculate monthly AWS costs for scenarios
+- **health-check.sh**: Validate environment and dependencies
+- **run-tests.sh**: Unified test runner for all test suites
+
+### CI/CD Pipeline
+
+GitHub Actions workflows automatically:
+- Lint and validate code on every push
+- Run unit and integration tests
+- Perform security scanning with tfsec and Trivy
+- Validate Terraform configurations
+- Check documentation quality
+
+See [.github/workflows/test.yml](.github/workflows/test.yml) for configuration.
+
+### Pre-commit Hooks
+
+Install pre-commit hooks for automatic validation:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Hooks will automatically:
+- Format Terraform files
+- Lint bash scripts
+- Check for secrets
+- Validate YAML/JSON syntax
+- Run security scans
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup instructions
+- Coding standards and best practices
+- How to add new scenarios
+- Testing requirements
+- Pull request process
+
+---
+
 ## 📚 Additional Resources
+
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Scenario design, threat model, CNAPP mapping
 - [docs/QUICKSTART.md](docs/QUICKSTART.md) — Setup and usage instructions
+- [tests/README.md](tests/README.md) — Testing guide and test documentation
+- [CONTRIBUTING.md](CONTRIBUTING.md) — Contribution guidelines
+- [CHANGELOG.md](CHANGELOG.md) — Version history and changes
+
+---
+
+## 📊 Cost Transparency
+
+Estimated monthly costs (us-east-1):
+- **Act I (IAM)**: $0.00 (Free tier)
+- **Act II (DSPM)**: $0.00 (No EC2, optional S3)
+- **Act III (Linux)**: ~$20-25 (t3.medium + EBS)
+- **Act IV (Windows)**: ~$30-35 (t3.medium Windows + EBS)
+- **Act V (Docker)**: ~$20-25 (t3.medium + EBS)
+
+**Total for all scenarios**: ~$70-85/month
+
+**Cost optimization tips**:
+- Deploy scenarios individually as needed
+- Use `terraform destroy` when finished testing
+- Consider t3.micro for non-production testing
+- Run `./tools/cost-estimate.sh` for detailed breakdown
 
 ---
 

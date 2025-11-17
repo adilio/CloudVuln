@@ -1,0 +1,136 @@
+# Pre-commit hooks for CloudVuln
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+        name: Fix end of files
+      - id: check-yaml
+        name: Check YAML syntax
+      - id: check-json
+        name: Check JSON syntax
+      - id: check-added-large-files
+        name: Check for large files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+      - id: check-executables-have-shebangs
+        name: Check executables have shebangs
+      - id: check-shebang-scripts-are-executable
+        name: Check shebang scripts are executable
+      - id: detect-private-key
+        name: Detect private keys
+      - id: mixed-line-ending
+        name: Check mixed line endings
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        name: Shellcheck - bash linting
+        args: ['-x', '--severity=warning']
+        exclude: 'tests/fixtures/|tests/helpers/mock'
+
+  # Terraform formatting and validation
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.86.0
+    hooks:
+      - id: terraform_fmt
+        name: Terraform format
+      - id: terraform_validate
+        name: Terraform validate
+        args:
+          - --hook-config=--retry-once-with-cleanup=true
+          - --tf-init-args=-backend=false
+      - id: terraform_tflint
+        name: Terraform lint
+        args:
+          - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
+        # Skip if tflint not installed
+        stages: [manual]
+      - id: terraform_docs
+        name: Terraform docs
+        args:
+          - --hook-config=--path-to-file=README.md
+          - --hook-config=--add-to-existing-file=true
+          - --hook-config=--create-file-if-not-exist=true
+        # Skip if terraform-docs not installed
+        stages: [manual]
+
+  # Terraform security scanning
+  - repo: https://github.com/aquasecurity/tfsec
+    rev: v1.28.5
+    hooks:
+      - id: tfsec
+        name: TFsec - Terraform security scan
+        args:
+          - --soft-fail
+          - --exclude-downloaded-modules
+          - --minimum-severity=MEDIUM
+        # Skip on intentionally vulnerable scenarios
+        exclude: '(iam-user-risk|linux-misconfig-web|windows-vuln-iis|docker-container-host)/.*\.tf$'
+
+  # Markdown linting
+  - repo: https://github.com/markdownlint/markdownlint
+    rev: v0.12.0
+    hooks:
+      - id: markdownlint
+        name: Markdown lint
+        args: ['-r', '~MD013,~MD033,~MD041']  # Ignore line length, HTML, first line H1
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        name: YAML lint
+        args: ['-d', '{extends: default, rules: {line-length: {max: 120}}}']
+
+  # Additional custom hooks
+  - repo: local
+    hooks:
+      - id: test-unit
+        name: Run unit tests
+        entry: bash -c 'if command -v bats >/dev/null 2>&1 && [ -d tests/unit ]; then bats tests/unit/ -t; else echo "Skipping unit tests (bats not installed or no tests found)"; fi'
+        language: system
+        pass_filenames: false
+        # Only run on manual trigger
+        stages: [manual]
+
+      - id: terraform-syntax-check
+        name: Terraform syntax validation
+        entry: bash -c 'if [ -x tests/integration/terraform_syntax_test.sh ]; then tests/integration/terraform_syntax_test.sh; fi'
+        language: system
+        pass_filenames: false
+        files: '\.tf$'
+        # Only run on manual trigger
+        stages: [manual]
+
+      - id: check-scenario-structure
+        name: Check scenario structure
+        entry: bash -c 'for dir in iam-user-risk dspm-data-generator linux-misconfig-web windows-vuln-iis docker-container-host; do for file in main.tf vars.tf deploy.sh teardown.sh README.md; do if [ ! -f "$dir/$file" ]; then echo "Missing $file in $dir"; exit 1; fi; done; done'
+        language: system
+        pass_filenames: false
+
+      - id: check-secrets
+        name: Check for hardcoded secrets
+        entry: bash -c 'if git diff --cached | grep -iE "(password|secret|key|token)\s*=\s*[\"'\''][^\"'\'']+[\"'\'']" | grep -v "dummy\|fake\|test\|example"; then echo "Potential hardcoded secret found!"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+# Configuration
+default_language_version:
+  python: python3
+
+# Skip certain hooks in CI
+ci:
+  skip: [terraform_tflint, terraform_docs, test-unit, terraform-syntax-check]
