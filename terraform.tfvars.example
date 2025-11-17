@@ -1,0 +1,84 @@
+# CloudVuln - Example Terraform Variables Configuration
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Owner tag for all resources (used for tracking and cleanup)
+owner = "your-name"
+
+# AWS region to deploy resources
+aws_region = "us-east-1"
+
+# SSH/RDP access CIDR (restrict to your IP for security)
+# To get your IP: curl ifconfig.me
+allow_ssh_cidr = "YOUR.IP.ADDRESS.HERE/32"  # e.g., "203.0.113.42/32"
+allow_rdp_cidr = "YOUR.IP.ADDRESS.HERE/32"
+
+# HTTP/HTTPS access CIDR (can be open for testing web scenarios)
+allow_http_cidr = "0.0.0.0/0"
+
+# SSH key pair name (must exist in your AWS account)
+# Create one with: aws ec2 create-key-pair --key-name cloudvuln --query 'KeyMaterial' --output text > ~/.ssh/cloudvuln.pem
+key_name = "your-keypair-name"
+
+# Scenario-specific variables
+scenario = "cloudvuln-lab"
+
+# Instance type (t3.medium recommended, t3.micro for cost savings)
+instance_type = "t3.medium"
+
+# =========================================================
+# Per-Scenario Variable Examples
+# =========================================================
+
+# IAM User Risk Scenario
+# iam_user_name = "cloudvuln-test-user"
+
+# DSPM Data Generator
+# dspm_record_count = 100
+# dspm_s3_bucket = "your-bucket-name-for-dspm-data"
+
+# Linux Misconfigured Web Server
+# dummy_api_key = "sk_test_dummy_key_12345"  # Fake API key for CSPM detection
+
+# Windows Vulnerable IIS
+# windows_admin_password = "ComplexPassword123!"  # Change this!
+
+# Docker Container Host
+# container_image = "nginx:latest"
+# container_port = 8080
+
+# =========================================================
+# Advanced Configuration
+# =========================================================
+
+# Enable detailed CloudWatch monitoring (additional cost)
+# enable_monitoring = false
+
+# Custom tags for all resources
+# custom_tags = {
+#   Environment = "testing"
+#   Project     = "security-validation"
+#   CostCenter  = "security-team"
+# }
+
+# =========================================================
+# Cost Optimization
+# =========================================================
+
+# For cost savings during testing:
+# - Use t3.micro instead of t3.medium
+# - Deploy only one scenario at a time
+# - Teardown when not actively testing
+# - Use spot instances (advanced)
+
+# Spot instance configuration (optional, for cost savings)
+# use_spot_instances = false
+# spot_price = "0.05"
+
+# =========================================================
+# Security Notes
+# =========================================================
+
+# DO NOT commit this file with real values to version control!
+# Add terraform.tfvars to .gitignore
+# These scenarios deploy intentionally vulnerable infrastructure
+# Only deploy in non-production AWS accounts
