@@ -5,9 +5,9 @@ on:
     branches: [ main, develop, 'claude/**' ]
   pull_request:
     branches: [ main, develop ]
-  schedule:
-    # Run nightly at 2 AM UTC
-    - cron: '0 2 * * *'
+  # schedule:
+  #   # Run nightly at 2 AM UTC
+  #   - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       run_integration_tests:
@@ -66,8 +66,6 @@ jobs:
         run: |
           git clone https://github.com/bats-core/bats-support.git /tmp/bats-support
           git clone https://github.com/bats-core/bats-assert.git /tmp/bats-assert
-          echo "/tmp/bats-support" >> $GITHUB_PATH
-          echo "/tmp/bats-assert" >> $GITHUB_PATH
 
       - name: Run unit tests
         run: |
