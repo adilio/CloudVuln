@@ -37,7 +37,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-          find . -name "*.sh" -type f -exec shellcheck -x {} +
+          find . -name "*.sh" -type f -print0 | xargs -0 shellcheck -x --severity=error
 
       - name: Validate Terraform formatting
         run: |

@@ -140,6 +140,7 @@ resource "aws_instance" "linux_web" {
   }
 
   user_data = templatefile("${path.module}/user_data.sh", {
+    OWNER         = var.owner
     SCENARIO_NAME = var.scenario
     DUMMY_API_KEY = var.dummy_api_key
     STRIPE_KEY    = var.stripe_key

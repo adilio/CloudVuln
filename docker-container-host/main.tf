@@ -55,8 +55,11 @@ data "aws_vpc" "default" {
   default = true
 }
 
-data "aws_subnet_ids" "default" {
-  vpc_id = data.aws_vpc.default.id
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
 }
 
 data "aws_ami" "ubuntu" {
@@ -80,7 +83,7 @@ resource "aws_instance" "docker_host" {
   instance_type               = "t3.medium"
   key_name                    = aws_key_pair.docker_key.key_name
   vpc_security_group_ids      = [aws_security_group.docker_sg.id]
-  subnet_id                   = element(data.aws_subnet_ids.default.ids, 0)
+  subnet_id                   = data.aws_subnets.default.ids[0]
   associate_public_ip_address = true
   user_data                   = file("${path.module}/user_data.sh")
 
