@@ -20,6 +20,10 @@ env:
   TF_VERSION: '1.5.0'
   AWS_REGION: 'us-east-1'
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   lint:
     name: Lint and Syntax Check
@@ -157,6 +161,8 @@ jobs:
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -167,10 +173,11 @@ jobs:
           soft_fail: true
           format: sarif
           additional_args: --exclude-downloaded-modules --minimum-severity MEDIUM
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload tfsec SARIF
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('results.sarif') != ''
         with:
           sarif_file: results.sarif
 
@@ -181,10 +188,11 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Trivy results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
 
